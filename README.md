@@ -1,4 +1,4 @@
-### Projet_STA
+# Projet_STA
 
 Voici une liste de convention, afin qu'on écrive chacun un code lisible :
 
@@ -10,7 +10,7 @@ Voici une liste de convention, afin qu'on écrive chacun un code lisible :
 
 * Mettez les noms des variables globales en lettres capitales, chaque mot séparé par un _ (tiret du 8)
 
-* Les noms des variables globales et de fonctions doivent suivre la convention : nomDeVariableGlobale
+* Les noms des variables locales et de fonctions doivent suivre la convention : nomDeVariableLocale
 
 * Commentez votre code au fur et à mesure.
 
