@@ -19,7 +19,7 @@
                                     exit(1);\
                                     }
 
-#define maxclients      10
+#define maxtrains      10
 
  
  
@@ -30,35 +30,49 @@ int flag_emission=0;
 int flag_reception=0; 
 int flag_fin=0;
 int sd; //Ma socket de dialogue
- 
 
-//utilisation :
-//serveur.exe <port_ecoute_serveur> <adresse_ip_serevur> 
-                                    
+void * receptionDonneesFils(); // tunnel
+void * receptionDemandeConnexion();
+void * receptionDonneesFilsTrainPrecedent(); // tunnel
+void * receptionDonneesTrain();
+
+void * envoiDonneesFilsDuTrainSuivant(); // tunnel
+void * envoiDonneesRBC(); // tunnel
+void * envoiDonneesTrain();
+
+void * creationFils();
+
+struct sockaddr_in adrserv, adrtrain; 
+
+typedef struct train {
+    int numtrain[maxtrains]; //A CHANGER PAR UNE LISTE SIMPLEMENT CHAINEE
+    int nbtrains; //nombre de trains 
+    } Ttrain;
+
+FILE * flog;
+
 int main(int argc, char * argv[])
 {
 //Section declaration des variables    
     
 int se; //Ma socket d'ecoute
 
-struct sockaddr_in adrserv, adrclient;
+Ttrain trains;
 
 int sizeaddr=0;
 
-pthread_t threadReception[maxclients]; //id thread pour la reception de donnees
-pthread_t threadEmission[maxclients]; //id thread pour l'emission de donnees
-pthread_t threadTraitement[maxclients]; //id thread pour le traitement des donnees
+int tunnel;
+
+int threadCreationFils;
 
 int ret; //Gestion des erreurs de creation de threads
 
-typedef struct client {
-int numclient[maxclients]; //numero du client TCP/IP
-int nbclients; //nombre de clients 
-} Tclient;
-
-Tclient clients;
-
 FILE * flog;
+
+int threadReceptionDonneesFils; 
+int threadReceptionDemandeConnexion; 
+pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains]; 
+pthread_t threadReceptionDonneesTrain[maxtrains];
 
 //Section traitement
 
@@ -93,9 +107,7 @@ switch (argc)
 // On affecte une adresse a la socket d'ecoute du serveur      
 CHECKERROR(bind(se, (const struct sockaddr *)&adrserv,sizeof(adrserv)),"\n\nProbleme de BIND !!!\n\n") ;
 
-
-
-//PHASE 2 : Attente des connexions des clients
+//PHASE 2 : Attente des connexions des trains
 
 //Ouverture d'un fichier de logs
 
@@ -108,44 +120,27 @@ if (!flog) {
 //Si je suis ici c'est que j'ai affecte une adresse a ma socket d'ecoute
 //Et j'ai ouvert le fichier de logs
 
-//Initialisation des varaibles de memorisation des clients
-clients.nbclients=-1;
+//Initialisation des variables de memorisation des trains
+trains.nbtrains=-1;
 
-for(int i=0; i < maxclients ; i++) clients.numclient[i]=-1; 
+for(int i=0; i < maxtrains ; i++) trains.numtrain[i]=-1; 
 
 
 while (1)
 {
-//On se met a l'ecoute des demandes d'ouverture de connexion
-listen(se,5);
+   
 
-// On accepte une demande d'ouverture de connexion. Dans cette version on ne recupere pas les coordonnees de l'appelant
-sizeaddr=sizeof(adrclient);
-sd=accept(se, (struct sockaddr *)&adrclient, (socklen_t*) &sizeaddr);
+    CHECKERROR(pthread_create(&threadCreationFils, NULL, creationFils(trains), NULL), "Erreur de creation du thread de création de fils!!!\n");
+ 
 
-clients.nbclients++; //On incremente le nombre de client
-clients.numclient[clients.nbclients]=clients.nbclients; //On defint le client actuel
+    // TRAITEMENT A ECRIRE ICI
 
-printf("\n Connexion sur le serveur  du client %s avec le port %d, le numero %d et la socket %d !!! \n\n", inet_ntoa(adrclient.sin_addr), ntohs(adrclient.sin_port),clients.numclient[clients.nbclients],sd);
-fprintf(flog,"\n Connexion sur le serveur  du client %s avec le port %d,le numero %d et la socket %d !!! \n\n", inet_ntoa(adrclient.sin_addr), ntohs(adrclient.sin_port),clients.numclient[clients.nbclients],sd);
-
-//Creation des threads
-CHECKERROR(pthread_create(&threadReception[clients.numclient[clients.nbclients]], NULL, reception, NULL), "Erreur de creation du thread de Reception !!!\n");
-
-CHECKERROR(pthread_create(&threadEmission[clients.numclient[clients.nbclients]], NULL, emission, NULL), "Erreur de creation du thread d'Emission !!!\n");
-
-CHECKERROR(pthread_create(&threadTraitement[clients.numclient[clients.nbclients]], NULL, traitement, NULL), "Erreur de creation du thread d'Traitement !!! \n");
-
-/*
-while (1)
-{
-    usleep(0);
-} */
-//Synchronisation des threads a la terminaison
-
-CHECKERROR(pthread_join(threadReception[clients.numclient[clients.nbclients]], NULL), "Erreur terminaison du thread Reception !!!\n");
-CHECKERROR(pthread_join(threadEmission[clients.numclient[clients.nbclients]], NULL), "Erreur terminaison du thread Emission !!!\n");
-CHECKERROR(pthread_join(threadTraitement[clients.numclient[clients.nbclients]], NULL), "Erreur terminaison du thread Traitement !!!\n");
+    //Synchronisation des threads a la terminaison
+    CHECKERROR(pthread_join(threadCreationFils, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
+    CHECKERROR(pthread_join(threadReceptionDonneesFilsTrainPrecedent[trains.numtrain[trains.nbtrains]], NULL), "Erreur terminaison du thread réception des données du train précédent !!!\n");
+    CHECKERROR(pthread_join(threadReceptionDonneesTrain[trains.numtrain[trains.nbtrains]], NULL), "Erreur terminaison du thread de réception des données du train !!!\n");
+    CHECKERROR(pthread_join(threadReceptionDonneesFils, NULL), "Erreur terminaison du thread de réception des données du fils !!!\n");
+    CHECKERROR(pthread_join(threadReceptionDemandeConnexion, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
 
 
 }
@@ -159,4 +154,68 @@ close(se);
 fclose(flog);
 return 1;
 }
-            
+
+void * creationFils(FILE * flog, struct sockaddr_in adrtrain, int sizeaddr, int se, Ttrain trains, int threadReceptionDonneesFils, int threadReceptionDemandeConnexion, pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains], pthread_t threadReceptionDonneesTrain[maxtrains], int tunnel){
+    //On se met a l'ecoute des demandes d'ouverture de connexion
+    listen(se,5);
+
+    // On accepte une demande d'ouverture de connexion. Dans cette version on ne recupere pas les coordonnees de l'appelant
+    sizeaddr=sizeof(adrtrain);
+    sd=accept(se, (struct sockaddr *)&adrtrain, (socklen_t*) &sizeaddr);
+
+    trains.nbtrains++; //On incremente le nombre de train
+    trains.numtrain[trains.nbtrains]=trains.nbtrains; //On defint le train actuel
+
+    printf("\n Connexion sur le serveur  du train %s avec le port %d, le numero %d et la socket %d !!! \n\n", inet_ntoa(adrtrain.sin_addr), ntohs(adrtrain.sin_port),trains.numtrain[trains.nbtrains],sd);
+    fprintf(flog,"\n Connexion sur le serveur  du train %s avec le port %d,le numero %d et la socket %d !!! \n\n", inet_ntoa(adrtrain.sin_addr), ntohs(adrtrain.sin_port),trains.numtrain[trains.nbtrains],sd);
+    // On crée le tunnel 
+    int descripteur[2];
+    tunnel = pipe(descripteur); // Il faut que cette ligne soit impérativement placée avant le fork
+    if (tunnel != 0)
+        printf("Problème avec la création du tunnel");
+    /*  Pour écrire dans le tunnel, on utilise : ssize_t write(int entreeTube, const void *elementAEcrire, size_t nombreOctetsAEcrire); 
+    Pour lire le tunnel, on utilise : ssize_t read(int sortieTube, void *elementALire, size_t nombreOctetsALire);*/
+    int pid;
+    pid=fork();
+    if (pid!=0) { //Je suis dans le code du pere
+        printf("\n Je suis le pere du processus de pid : %d \n\n", pid);
+        CHECKERROR(pthread_create(&threadReceptionDonneesFils, NULL, receptionDonneesFils, NULL), "Erreur de creation du thread de réception des données du fils !!! \n");
+        CHECKERROR(pthread_create(&threadReceptionDemandeConnexion, NULL, receptionDemandeConnexion, NULL), "Erreur de creation du thread de réception d'une demande de connexion !!! \n");
+        close(sd); // Le pere ferme la socket de dialogue pour ne pas interfere avec le fils
+    }
+
+    else { //Je suis dans le code du fils
+
+    //Creation des threads
+    CHECKERROR(pthread_create(&threadReceptionDonneesFilsTrainPrecedent[trains.numtrain[trains.nbtrains]], NULL, receptionDonneesFilsTrainPrecedent, NULL), "Erreur de creation du thread de réception des données du train précédent!!!\n");
+    CHECKERROR(pthread_create(&threadReceptionDonneesTrain[trains.numtrain[trains.nbtrains]], NULL, receptionDonneesTrain, NULL), "Erreur de creation du thread de réception des données du train !!!\n");
+    }
+}
+
+void * receptionDonneesFils( void * arg){
+    
+}   
+
+void * receptionDemandeConnexion( void * arg){
+    
+} 
+
+void * receptionDonneesFilsTrainPrecedent( void * arg){
+    
+} 
+
+void * receptionDonneesTrain( void * arg){
+
+} 
+
+void * envoiDonneesFilsDuTrainSuivant( void * arg){
+    
+} 
+
+void * envoiDonneesRBC( void * arg){
+    
+} 
+
+void * envoiDonneesTrain( void * arg){
+    
+} 
