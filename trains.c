@@ -87,7 +87,7 @@ int main(int argc, char * argv[]){
     }
     
     printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
-    fprintf(clientlog,"\n Connexion sur le serveur  du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
+    fprintf(clientlog,"\n Connexion sur le serveur du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
 
     //Creation des threads
     CHECKERROR(pthread_create(&threadEnvoiDonneesFils, NULL, envoiDonneesFils, NULL), "Erreur de creation du thread d'envoi de donnee !!!\n");

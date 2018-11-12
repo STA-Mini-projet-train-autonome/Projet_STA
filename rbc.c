@@ -10,7 +10,6 @@
 #include <pthread.h>
 
 
-
 #define PORT_ECOUTE_SERVEUR     8000
 #define MAXCAR      80
 
@@ -30,6 +29,8 @@ int flag_emission=0;
 int flag_reception=0; 
 int flag_fin=0;
 int tunnel;
+
+int *listeTrains[maxtrains];
 
 void * receptionDonneesFils(); // tunnel
 void * receptionDemandeConnexion();
@@ -53,9 +54,9 @@ typedef struct train {
 
 //Creation d'une structure qui regroupe toutes les threads qui seront utilisees
 typedef struct thread {
-    int threadCreationFils;
-    int threadReceptionDonneesFils;
-    int threadReceptionDemandeConnexion;
+    pthread_t threadCreationFils;
+    pthread_t threadReceptionDonneesFils;
+    pthread_t threadReceptionDemandeConnexion;
     pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains];
     pthread_t threadReceptionDonneesTrain[maxtrains];
 } Tthread;
@@ -175,7 +176,7 @@ void * creationFils(void * arg){
     pid=fork();
     if (pid!=0) { //Je suis dans le code du pere
         printf("\n Je suis le pere du processus de pid : %d \n\n", pid);
-        CHECKERROR(pthread_create(&argumentsActuels->threads.threadReceptionDonneesFils, NULL, receptionDonneesFils, NULL), "Erreur de creation du thread de réception des données du fils !!! \n");
+        CHECKERROR(pthread_create(&argumentsActuels->threads.threadReceptionDonneesFils, NULL, receptionDonneesFils, arg), "Erreur de creation du thread de réception des données du fils !!! \n");
         CHECKERROR(pthread_create(&argumentsActuels->threads.threadReceptionDemandeConnexion, NULL, receptionDemandeConnexion, NULL), "Erreur de creation du thread de réception d'une demande de connexion !!! \n");
         close(argumentsActuels->sd); // Le pere ferme la socket de dialogue pour ne pas interferer avec le fils
     }
@@ -194,7 +195,22 @@ void * receptionDonneesFils( void * arg){
 
 //Fonction servant a etablir pour la premiere fois une connexion entre un train et le RBC
 void * receptionDemandeConnexion( void * arg){
-    
+    Targument *argumentsActuels = arg;
+    int carlus;
+    do{
+        printf("Réception en cours de la socket %d !!! \n",argumentsActuels->sd);
+        getchar();
+        carlus = read(argumentsActuels->sd,buf_reception,MAXCAR);
+        if (!carlus) printf("Aucun caractère reçu !!! \n");
+        else{
+            flag_reception=1;
+            printf("Réception effectuée de %d caractères !!! \n",carlus);
+            // Ajout du numéro de train dans le tableau
+        }
+    }
+    while (!flag_fin);
+    printf("Fin du thread de réception de la demande de connexion !!! \n");
+    pthread_exit(0);
 } 
 
 void * receptionDonneesFilsTrainPrecedent( void * arg){
