@@ -51,108 +51,100 @@ typedef struct train {
 
 FILE * flog;
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char * argv[]){
 //Section declaration des variables    
     
-int se; //Ma socket d'ecoute
+    int se; //Ma socket d'ecoute
 
-Ttrain trains;
+    Ttrain trains;
 
-int sizeaddr=0;
+    int sizeaddr=0;
 
-int tunnel;
+    int tunnel;
 
-int threadCreationFils;
+    int threadCreationFils;
 
-int ret; //Gestion des erreurs de creation de threads
+    int ret; //Gestion des erreurs de creation de threads
 
-FILE * flog;
+    FILE * flog;
 
-int threadReceptionDonneesFils; 
-int threadReceptionDemandeConnexion; 
-pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains]; 
-pthread_t threadReceptionDonneesTrain[maxtrains];
+    int threadReceptionDonneesFils;
+    int threadReceptionDemandeConnexion;
+    pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains];
+    pthread_t threadReceptionDonneesTrain[maxtrains];
 
-//Section traitement
+    //Section traitement
 
-// Phase 1 : Ouverture de la socket d'ecoute
-printf("\n Demarrage d'un Serveur INTERNET EN MODE CONNECTE !!! \n\n");
-se=socket(AF_INET, SOCK_STREAM, 0);//Creation de la socket d'ecoute
-CHECKERROR(se," \n\n Probleme d'ouverture de socket !!! \n\n"); //Verification que la socket a ete cree sans probleme
+    // Phase 1 : Ouverture de la socket d'ecoute
+    printf("\n Demarrage d'un Serveur INTERNET EN MODE CONNECTE !!! \n\n");
+    se=socket(AF_INET, SOCK_STREAM, 0);//Creation de la socket d'ecoute
+    CHECKERROR(se," \n\n Probleme d'ouverture de socket !!! \n\n"); //Verification que la socket a ete cree sans probleme
 
-//Definir l'adresse de la machine
+    //Definir l'adresse de la machine
 
-adrserv.sin_family=AF_INET;
-switch (argc)
-{
-    case 3:     //Utilisation : serveur_stream_thread.exe <port_ecoute_serveur> <adresse_ip_sereveur> 
-                inet_aton(argv[2],&adrserv.sin_addr);
-                //Et le numero de port
-                adrserv.sin_port=htons(atoi(argv[1]));
-                break;
-    case 2:    //Utilisation : serveur.exe <port_ecoute_serveur> 
-                adrserv.sin_addr.s_addr=INADDR_ANY;
-                //Et le numero de port
-                adrserv.sin_port=htons(atoi(argv[1]));
-                break;
-    case 1:    //Utilisation : serveur.exe
-                adrserv.sin_addr.s_addr=INADDR_ANY;
-                //Et le numero de port
-                adrserv.sin_port=htons(PORT_ECOUTE_SERVEUR);
-                break;
-    default : printf("\nLa syntaxe d'utlisation est 'serveur_stream_thread.exe <port_ecoute_serveur> <adresse_ip_sereveur> ' !!! \n");
-}
+    adrserv.sin_family=AF_INET;
+    switch (argc){
+        case 3:     //Utilisation : serveur_stream_thread.exe <port_ecoute_serveur> <adresse_ip_sereveur>
+            inet_aton(argv[2],&adrserv.sin_addr);
+            //Et le numero de port
+            adrserv.sin_port=htons(atoi(argv[1]));
+            break;
+        case 2:    //Utilisation : serveur.exe <port_ecoute_serveur>
+            adrserv.sin_addr.s_addr=INADDR_ANY;
+            //Et le numero de port
+            adrserv.sin_port=htons(atoi(argv[1]));
+            break;
+        case 1:    //Utilisation : serveur.exe
+            adrserv.sin_addr.s_addr=INADDR_ANY;
+            //Et le numero de port
+            adrserv.sin_port=htons(PORT_ECOUTE_SERVEUR);
+            break;
+        default : printf("\nLa syntaxe d'utlisation est 'serveur_stream_thread.exe <port_ecoute_serveur> <adresse_ip_sereveur> ' !!! \n");
+    }
 
-// On affecte une adresse a la socket d'ecoute du serveur      
-CHECKERROR(bind(se, (const struct sockaddr *)&adrserv,sizeof(adrserv)),"\n\nProbleme de BIND !!!\n\n") ;
+    // On affecte une adresse a la socket d'ecoute du serveur
+    CHECKERROR(bind(se, (const struct sockaddr *)&adrserv,sizeof(adrserv)),"\n\nProbleme de BIND !!!\n\n") ;
 
-//PHASE 2 : Attente des connexions des trains
+    //PHASE 2 : Attente des connexions des trains
 
-//Ouverture d'un fichier de logs
+    //Ouverture d'un fichier de logs
 
-flog=fopen("serveur_stream_thread.log","a+");
-if (!flog) {
-    printf("Erreur d'ouverture du fichier de logs !!! \n\n");
-    exit(-1);
-            }
+    flog=fopen("serveur_stream_thread.log","a+");
+    if (!flog) {
+        printf("Erreur d'ouverture du fichier de logs !!! \n\n");
+        exit(-1);
+    }
     
-//Si je suis ici c'est que j'ai affecte une adresse a ma socket d'ecoute
-//Et j'ai ouvert le fichier de logs
+    //Si je suis ici c'est que j'ai affecte une adresse a ma socket d'ecoute
+    //Et j'ai ouvert le fichier de logs
 
-//Initialisation des variables de memorisation des trains
-trains.nbtrains=-1;
+    //Initialisation des variables de memorisation des trains
+    trains.nbtrains=-1;
 
-for(int i=0; i < maxtrains ; i++) trains.numtrain[i]=-1; 
+    for(int i=0; i < maxtrains ; i++) trains.numtrain[i]=-1;
 
-
-while (1)
-{
-   
-
-    CHECKERROR(pthread_create(&threadCreationFils, NULL, creationFils(trains), NULL), "Erreur de creation du thread de création de fils!!!\n");
+    while (1){
+        CHECKERROR(pthread_create(&threadCreationFils, NULL, creationFils(trains), NULL), "Erreur de creation du thread de création de fils!!!\n");
  
 
-    // TRAITEMENT A ECRIRE ICI
+        // TRAITEMENT A ECRIRE ICI
 
-    //Synchronisation des threads a la terminaison
-    CHECKERROR(pthread_join(threadCreationFils, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
+        //Synchronisation des threads a la terminaison
+        CHECKERROR(pthread_join(threadCreationFils, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
     CHECKERROR(pthread_join(threadReceptionDonneesFilsTrainPrecedent[trains.numtrain[trains.nbtrains]], NULL), "Erreur terminaison du thread réception des données du train précédent !!!\n");
     CHECKERROR(pthread_join(threadReceptionDonneesTrain[trains.numtrain[trains.nbtrains]], NULL), "Erreur terminaison du thread de réception des données du train !!!\n");
-    CHECKERROR(pthread_join(threadReceptionDonneesFils, NULL), "Erreur terminaison du thread de réception des données du fils !!!\n");
-    CHECKERROR(pthread_join(threadReceptionDemandeConnexion, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
+        CHECKERROR(pthread_join(threadReceptionDonneesFils, NULL), "Erreur terminaison du thread de réception des données du fils !!!\n");
+        CHECKERROR(pthread_join(threadReceptionDemandeConnexion, NULL), "Erreur terminaison du thread de réception d'une demande de connexion !!!\n");
+    }
 
+    printf("Arret du programme principal !!!\n");
 
-}
-
-printf("Arret du programme principal !!!\n");
-
-//Fermeture des sockets
-close(sd);
-close(se);
-//Fermeture fichier
-fclose(flog);
-return 1;
+    //Fermeture des sockets
+    close(sd);
+    close(se);
+    //Fermeture fichier
+    fclose(flog);
+    return 1;
 }
 
 void * creationFils(FILE * flog, struct sockaddr_in adrtrain, int sizeaddr, int se, Ttrain trains, int threadReceptionDonneesFils, int threadReceptionDemandeConnexion, pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains], pthread_t threadReceptionDonneesTrain[maxtrains], int tunnel){
