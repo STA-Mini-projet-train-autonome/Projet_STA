@@ -1,4 +1,4 @@
-//Trains premier commit
+//Trains fonction main() premier commit
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@
                                     }
  
  
- //Definition des variables globales
+//Definition des variables globales
 char buf_reception[MAXCAR];
 char buf_emission[MAXCAR]; 
 int flag_emission=0; // A 1 indique que des data sont presentes pour etre emises
@@ -45,9 +45,8 @@ int main(int argc, char * argv[]){
 
     FILE * clientlog; //Fichier pour archiver les evenements
 
-    int threadEnvoiDonneesFils;
-    int threadReceptionDistance;
-
+    int threadEnvoiDonneesFils; //Thread dediee a l'envoi en continu des donnees (position courante et vitesse si possible)
+    int threadReceptionDistance; //Thread dediee a le reception en continu de la distance qui separe le train actuel de son predecesseur
 
     //Creation de la socket
     sd=socket(AF_INET, SOCK_STREAM, 0);
@@ -55,21 +54,20 @@ int main(int argc, char * argv[]){
 
     
     //Definir l'adresse du serveur eloigne
-
     adrserv.sin_family=AF_INET;
 
     switch (argc){
-        case 3 :  //cas 1 : Utilisation : client_stream_thread.exe  <adresse_ip_serveur> <port_ecoute_serveur>
+        case 3 :  //cas 1 : Utilisation : trains.exe  <adresse_ip_serveur> <port_ecoute_serveur>
             inet_aton(argv[1],&adrserv.sin_addr);
             //Et le numero de port
             adrserv.sin_port=htons(atoi(argv[2]));
             break;
-        case 2 :  //cas 2 : Utilisation : client_stream_thread.exe  <adresse_ip_serveur>
+        case 2 :  //cas 2 : Utilisation : trains.exe  <adresse_ip_serveur>
             inet_aton(argv[1],&adrserv.sin_addr);
             //Et le numero de port defini localement
             adrserv.sin_port=htons(REMOTE_PORT);
             break;
-        case 1 :  //cas 3 : Utilisation : client_stream_thread.exe
+        case 1 :  //cas 3 : Utilisation : trains.exe
             inet_aton(REMOTE_ADDR_IP,&adrserv.sin_addr);
             //Et le numero de port
             adrserv.sin_port=htons(REMOTE_PORT);
@@ -87,7 +85,6 @@ int main(int argc, char * argv[]){
         printf("Echec d'ouverture du fichier de log du client !!!");
         exit(-1);
     }
-    
     
     printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
     fprintf(clientlog,"\n Connexion sur le serveur  du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
@@ -138,7 +135,7 @@ void * receptionDistance( void * arg){
     if (!carlus) printf("Aucun caractere RECU !!! \n");
         else {
             flag_reception=1;
-    //      printf("Reception effectuee de %d caracteres !!! \n",carlus);
+            //printf("Reception effectuee de %d caracteres !!! \n",carlus);
         }
         // Mise à jour de la simulation avec les nouvelles valeurs
     }
