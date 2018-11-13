@@ -10,8 +10,8 @@
 #include <pthread.h>
 
 
-#define LOCAL_ADDR_IP     "172.31.65.163"
-#define REMOTE_ADDR_IP     "172.31.65.163"
+#define LOCAL_ADDR_IP     "172.31.68.26"
+#define REMOTE_ADDR_IP     "127.0.0.1"
 #define REMOTE_PORT         8000
 
 #define MAXCAR      80
@@ -45,8 +45,8 @@ int main(int argc, char * argv[]){
 
     FILE * clientlog; //Fichier pour archiver les evenements
 
-    int threadEnvoiDonneesFils; //Thread dediee a l'envoi en continu des donnees (position courante et vitesse si possible)
-    int threadReceptionDistance; //Thread dediee a le reception en continu de la distance qui separe le train actuel de son predecesseur
+pthread_t threadEnvoiDonneesFils; 
+pthread_t threadReceptionDistance; 
 
     //Creation de la socket
     sd=socket(AF_INET, SOCK_STREAM, 0);
@@ -75,8 +75,8 @@ int main(int argc, char * argv[]){
         default : printf("\n Cas imprevu !!! Gros bogue en ligne de commande !!!");
     }
  
-    //Demande de connexion au serveur
-    CHECKERROR(connect(sd,&adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
+//Demande de connexion au serveur 
+CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
 
     // Ici cela signifie que la connexion a ete ouverte
     // Ouverture du fichier de log des data du client
