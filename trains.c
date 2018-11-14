@@ -33,24 +33,7 @@ int sd; //Ma socket de dialogue
 void * envoiDonneesFils( void * arg);
 void * receptionDistance(void * arg);
 void * simulation(void * arg);
-
-void envoiDemandePremiereConnexion(struct sockaddr_in adrserv){
-    //Demande de connexion au serveur
-    CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
-    
-    printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
-    
-    int caremis; //Nombre d'octets emis
-    printf("Entrez la position du train : ");
-    gets(buf_emission);
-    caremis = write(sd, buf_emission, strlen(buf_emission)+1);
-    if (caremis) {
-        printf("\n Message émis !!! Toucher une touche du clavier pour continuer. \n");
-    }
-    else printf("\n Il y a un problème !!!\n");
-    flag_emission=0;
-    printf("Fin de la demande de première connexion !!!\n");
-}
+void envoiDemandePremiereConnexion(struct sockaddr_in adrserv);
 
 int main(int argc, char * argv[]){
     //Declaration des variables locales
@@ -125,6 +108,24 @@ int main(int argc, char * argv[]){
     fclose(clientlog);
 
     close(sd);
+}
+
+void envoiDemandePremiereConnexion(struct sockaddr_in adrserv){
+    //Demande de connexion au serveur
+    CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
+    
+    printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
+    
+    int caremis; //Nombre d'octets emis
+    printf("Entrez la position du train : ");
+    gets(buf_emission);
+    caremis = write(sd, buf_emission, strlen(buf_emission)+1);
+    if (caremis) {
+        printf("\n Message émis !!! Toucher une touche du clavier pour continuer. \n");
+    }
+    else printf("\n Il y a un problème !!!\n");
+    flag_emission=0;
+    printf("Fin de la demande de première connexion !!!\n");
 }
 
 void * envoiDonneesFils( void * arg){

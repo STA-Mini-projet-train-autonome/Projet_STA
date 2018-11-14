@@ -124,7 +124,7 @@ int main(int argc, char * argv[]){
 
     //Ouverture d'un fichier de logs
 
-    flog=fopen("serveur_stream_thread.log","a+");
+    flog=fopen("rbc.log","a+");
     if (!flog) {
         printf("Erreur d'ouverture du fichier de logs !!! \n\n");
         exit(-1);
