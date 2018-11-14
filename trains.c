@@ -1,4 +1,4 @@
-//Trains fonction main() premier commit
+//Trains fonction main()_v2 second commit
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 
-#define LOCAL_ADDR_IP     "172.31.68.26"
+#define LOCAL_ADDR_IP     "172.0.0.1"
 #define REMOTE_ADDR_IP     "127.0.0.1"
 #define REMOTE_PORT         8000
 
@@ -19,7 +19,7 @@
 #define CHECKERROR(code,msg)    if (code==-1) { \
                                     perror(msg);\
                                     exit(1);\
-                                    }
+                                }
  
  
 //Definition des variables globales
@@ -32,7 +32,25 @@ int sd; //Ma socket de dialogue
 
 void * envoiDonneesFils( void * arg);
 void * receptionDistance(void * arg);
-void * simulation(void * arg);                                  
+void * simulation(void * arg);
+
+void envoiDemandePremiereConnexion(struct sockaddr_in adrserv){
+    //Demande de connexion au serveur
+    CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
+    
+    printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
+    
+    int caremis; //Nombre d'octets emis
+    printf("Entrez la position du train : ");
+    gets(buf_emission);
+    caremis = write(sd, buf_emission, strlen(buf_emission)+1);
+    if (caremis) {
+        printf("\n Message émis !!! Toucher une touche du clavier pour continuer. \n");
+    }
+    else printf("\n Il y a un problème !!!\n");
+    flag_emission=0;
+    printf("Fin de la demande de première connexion !!!\n");
+}
 
 int main(int argc, char * argv[]){
     //Declaration des variables locales
@@ -45,8 +63,8 @@ int main(int argc, char * argv[]){
 
     FILE * clientlog; //Fichier pour archiver les evenements
 
-pthread_t threadEnvoiDonneesFils; 
-pthread_t threadReceptionDistance; 
+    pthread_t threadEnvoiDonneesFils;
+    pthread_t threadReceptionDistance;
 
     //Creation de la socket
     sd=socket(AF_INET, SOCK_STREAM, 0);
@@ -74,10 +92,9 @@ pthread_t threadReceptionDistance;
             break;
         default : printf("\n Cas imprevu !!! Gros bogue en ligne de commande !!!");
     }
- 
-//Demande de connexion au serveur 
-CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
 
+    envoiDemandePremiereConnexion(adrserv);
+    
     // Ici cela signifie que la connexion a ete ouverte
     // Ouverture du fichier de log des data du client
     clientlog=fopen("trains.log", "a+");
@@ -86,7 +103,6 @@ CHECKERROR(connect(sd, &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n")
         exit(-1);
     }
     
-    printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
     fprintf(clientlog,"\n Connexion sur le serveur du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
 
     //Creation des threads
@@ -120,6 +136,8 @@ void * envoiDonneesFils( void * arg){
         if (flag_emission) {
             caremis=write(sd,buf_emission, strlen(buf_emission)+1);
             flag_emission=0;
+            //if (!caremis) printf("Aucun caractère émis !!!\n");
+            //else printf("%d caractères émis !!!\n",caremis);
         }
     }
     while ((strcmp(tolower(buf_emission),"fin")) || flag_fin);
@@ -130,12 +148,13 @@ void * envoiDonneesFils( void * arg){
 void * receptionDistance( void * arg){
     int carlus ; //Nombre d'octets recu
     do{
-    carlus=read(sd,buf_reception, MAXCAR);
-    printf("Donnees reçues : %s", buf_reception);
-    if (!carlus) printf("Aucun caractere RECU !!! \n");
+        //printf("Réception en cours sur la socket %d !!! \n", sd);
+        carlus=read(sd,buf_reception, MAXCAR);
+        printf("Donnees reçues : %s", buf_reception);
+        if (!carlus) printf("Aucun caractère reçu !!! \n");
         else {
             flag_reception=1;
-            //printf("Reception effectuee de %d caracteres !!! \n",carlus);
+            //printf("Réception effectuée de %d caractères !!! \n",carlus);
         }
         // Mise à jour de la simulation avec les nouvelles valeurs
     }
