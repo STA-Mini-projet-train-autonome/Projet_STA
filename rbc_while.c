@@ -186,12 +186,12 @@ int main(int argc, char * argv[]){
         close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][0]);
         }
                 
-        position[0].positionEspace = 15;
-        position[0].vitesse = 18;
+        //position[0].positionEspace = 15;
+        //position[0].vitesse = 18;
     }
     while(1){
-        position[0].positionEspace = position[0].positionEspace+2;
-        position[0].vitesse = 18;
+        //position[0].positionEspace = position[0].positionEspace+2;
+        //position[0].vitesse = 18;
         //Reception de la position du train
         carlus=read(arguments.sd, buf_reception, MAXCAR);
         if (!carlus) printf("\n Il y a un probleme !!!\n");
@@ -220,8 +220,12 @@ int main(int argc, char * argv[]){
         printf(" vitesse %f \n",position[arguments.numero].vitesse);
         //printf("Nous sommes dans le père (pid = %d).\nIl envoie le message suivant au fils : \"%s\".\n\n\n", getpid(), message2);
         if(arguments.numero>0){
-        sprintf(message2,"%f;%f",position[arguments.numero-1].positionEspace,position[arguments.numero-1].vitesse);
-        write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1], message2, MAXCAR);
+            sprintf(message2,"%f;%f",position[arguments.numero-1].positionEspace,position[arguments.numero-1].vitesse);
+            write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1], message2, MAXCAR);
+        }
+        else{
+            sprintf(message2,"OK;OK");
+            write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1], message2, MAXCAR);
         }
 
     }
