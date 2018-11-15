@@ -65,121 +65,118 @@ int main()
     long cor_y=0;
     unsigned char adressOfHedgehog=0;
     unsigned long timestamp;
-    /* simple noncanonical input */
+    unsigned char buf[2];
+    int rdlen;
+    
     do {
-        unsigned char buf[2];
-        int rdlen;
-
         rdlen = read(fd, buf, sizeof(buf) - 1);
         if (rdlen > 0) {
             unsigned char *p;
-            printf("Read %d:", rdlen);
-	    unsigned char byte;
+            //printf("Read %d:", rdlen);
+	    	unsigned char byte;
             for (p = buf; rdlen-- > 0; p++){
-		byte=*p;
-                printf(" %x \n ", byte);
-		if(trameReception>4){
-			trame_hexa[trameReception]=byte;
-			//printf("t :  %x \n", trame_hexa[trameReception]);
-			trameReception++;
+				byte=*p;
+                //printf(" %x \n ", byte);
+			}
+			if(trameReception>4){
+				trame_hexa[trameReception]=byte;
+				//printf("t :  %x \n", trame_hexa[trameReception]);
+				trameReception++;
 		        if (trameReception==29){
-				printf("=======Fin de la Trame=======\n");
-				trameReception=0;
-				verif=0;
-				trameRecue=1;
-			}
-
-		}
-		else {
-		/* Rechecherche du debut de la trame*/
-		switch (verif){
-			case 0:
-				if (byte == 0xff){
-					printf("=====Debut de trame possible=====\n");
-					verif++;
-					trame_hexa[trameReception]=byte;
-					trameReception++;
-					//printf("verif : %d\n",verif);
-				}
-				break;
-			case 1:
-				if (byte == 0x47){
-                                        verif++;
-                                        trame_hexa[trameReception]=byte;
-                                        trameReception++;
-					//printf("verif : %d\n",verif);
-				}
-				else {
+					//printf("=======Fin de la Trame=======\n");
+					trameReception=0;
 					verif=0;
-					printf("Erreur de detection");
-					trameReception=0;
+					trameRecue=1;
 				}
-				break;
-			case 2:
-                                if (byte == 0x11){
-                                        verif++;
-                                        trame_hexa[trameReception]=byte;
-                                        trameReception++;
-					//printf("verif : %d\n",verif);
-                                }
-                                else {
-                                	verif=0;
-					trameReception=0;
-					printf("Erreur de detection");
+			}
+			else {
+			/* Rechecherche du debut de la trame*/
+				switch (verif){
+					case 0:
+						if (byte == 0xff){
+							printf("=====Debut de trame possible=====\n");
+							verif++;
+							trame_hexa[trameReception]=byte;
+							trameReception++;
+							//printf("verif : %d\n",verif);
+						}
+						break;
+					case 1:
+						if (byte == 0x47){
+	                        verif++;
+                            trame_hexa[trameReception]=byte;
+                            trameReception++;
+							//printf("verif : %d\n",verif);
+						}
+						else {
+							verif=0;
+							printf("Erreur de detection\n");
+							trameReception=0;
+						}
+						break;
+					case 2:
+                        if (byte == 0x11){
+                            verif++;
+   	                        trame_hexa[trameReception]=byte;
+	                        trameReception++;
+							//printf("verif : %d\n",verif);
+ 	                    }
+                        else {
+                           	verif=0;
+							trameReception=0;
+							printf("Erreur de detection\n");
+						}
+						break;
+                    case 3:
+                        if (byte == 0x00){
+                            verif++;
+                            trame_hexa[trameReception]=byte;
+                            trameReception++;
+							//printf("verif : %d\n",verif);
+                        }
+                        else {
+                            verif=0;
+							trameReception=0;
+                            printf("Erreur de detection\n");
+                        }
+                        break;
+                    case 4:
+                        if (byte == 0x16){
+                            verif++;
+                            trame_hexa[trameReception]=byte;
+                            trameReception++;
+							//printf("verif : %d\n",verif);
+                        }
+                	    else {
+							trameReception=0;
+                            verif=0;
+                            printf("Erreur de detection \n");
+                        }
+                        break;
+					default:
+						printf("Erreur sur verif, reinitialisation\n");
+						trameReception=0;
+						verif=0;
 				}
-				break;
-                        case 3:
-                                if (byte == 0x00){
-                                        verif++;
-                                        trame_hexa[trameReception]=byte;
-                                        trameReception++;
-					//printf("verif : %d\n",verif);
-                                }
-                                else {
-                                        verif=0;
-					trameReception=0;
-                                        printf("Erreur de detection");
-                                }
-                                break;
-                        case 4:
-                                if (byte == 0x16){
-                                        verif++;
-                                        trame_hexa[trameReception]=byte;
-                                        trameReception++;
-					//printf("verif : %d\n",verif);
-                                }
-                                else {
-					trameReception=0;
-                                        verif=0;
-                                        printf("Erreur de detection");
-                                }
-                                break;
-			default:
-				printf("Erreur sur verif, reinitialisation");
-				trameReception=0;
-				verif=0;
 			}
 		}
-	}
-
-        } else if (rdlen < 0) {
+		else if (rdlen < 0) {
             printf("Error from read: %d: %s\n", rdlen, strerror(errno));
         }
-	if(trameRecue){
-		printf("Reception d'une trame complete : \n");
-		int i;
-		for (i=0;i<29; i++){
-			printf ("%x ",trame_hexa[i]);
+		if(trameRecue){
+			printf("Reception d'une trame complete : \n");
+			int i;
+			for (i=0;i<29; i++){
+				printf ("%x ",trame_hexa[i]);
+			}
+			printf("\n");
+			trameRecue=0;
+			adressOfHedgehog=trame_hexa[22];
+			timestamp=trame_hexa[5]+(trame_hexa[6]<<8)+(trame_hexa[7]<<16)+(trame_hexa[8]<<24);
+			cor_x=trame_hexa[9]+(trame_hexa[10]<<8)+(trame_hexa[11]<<16)+(trame_hexa[12]<<24);
+			cor_y=trame_hexa[13]+(trame_hexa[14]<<8)+(trame_hexa[15]<<16)+(trame_hexa[16]<<24);
+			printf("\n Le train portant la balise %hhu a pour coordonnees x=%li et y=%li a t=%lu ms.\n\n",adressOfHedgehog,cor_x,cor_y,timestamp);
 		}
-		printf("\n");
-		trameRecue=0;
-		adressOfHedgehog=trame_hexa[22];
-		timestamp=trame_hexa[5]+(trame_hexa[6]<<8)+(trame_hexa[7]<<16)+(trame_hexa[8]<<24);
-		cor_x=trame_hexa[9]+(trame_hexa[10]<<8)+(trame_hexa[11]<<16)+(trame_hexa[12]<<24);
-		cor_y=trame_hexa[13]+(trame_hexa[14]<<8)+(trame_hexa[15]<<16)+(trame_hexa[16]<<24);
-		printf("\n Le train portant la balise %hhu a pour coordonnees x=%li et y=%li a t=%lu ms.\n\n",adressOfHedgehog,cor_x,cor_y,timestamp);
-
-	}
     } while (1);
 }
 
