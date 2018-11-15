@@ -10,8 +10,8 @@
 #include <ctype.h>
 
 
-#define LOCAL_ADDR_IP     "172.0.0.1"
-#define REMOTE_ADDR_IP     "127.0.0.1"
+#define LOCAL_ADDR_IP     "192.168.0.195"
+#define REMOTE_ADDR_IP     "192.168.0.155"
 #define REMOTE_PORT         8000
 #define MAXCAR      80
 
@@ -29,6 +29,7 @@ int flag_reception=0;  // A 1 indique que des data ont ete recues
 int flag_fin=0; // A 1 indique l'arret du programme
 //Ma socket de dialogue
 
+unsigned long tpsPrecedent;
 
 int main(int argc, char * argv[]){
     int sd; 
@@ -39,7 +40,7 @@ int main(int argc, char * argv[]){
     //int caremis; //Nombre d'octets emis
 
     int sizeaddr; // Taille en octets de l'adresse
-
+    
   //  FILE * clientlog; //Fichier pour archiver les evenements
 
     //Creation de la socket
@@ -75,7 +76,7 @@ int main(int argc, char * argv[]){
     printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
     
     int caremis; //Nombre d'octets emis
-    printf("Entrez la position du train : ");
+    printf("Entrez l'ordre du train, sa position initiale ainsi que sa vitesse initiale sous le format 'ordre;position;vitesse' : ");
     gets(buf_emission);
     caremis = write(sd, buf_emission, strlen(buf_emission)+1);
     if (caremis) {
@@ -92,12 +93,19 @@ int main(int argc, char * argv[]){
     }*/
     
    // fprintf(clientlog,"\n Connexion sur le serveur du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
+    
+    
     int carlus;
     while(1){
         //Emission
-        printf("Position du train : \n");
-        gets(buf_emission);
+        //printf("Position du train : \n");
+        //gets(buf_emission);
+        //
+        
         printf("Envoi position et vitesse\n");
+        double position = 11.763;
+        double vitesse = 13.987;
+        sprintf(buf_emission,"%lf;%lf",position,vitesse);
         caremis=write(sd,buf_emission, strlen(buf_emission)+1);
             if (!caremis) printf("Aucun caractère émis !!!\n");
             //else printf("%d caractères émis !!!\n",caremis);
@@ -106,9 +114,19 @@ int main(int argc, char * argv[]){
         //printf("Réception en cours sur la socket %d !!! \n", sd);
         carlus=read(sd,buf_reception, MAXCAR);
         printf("Donnees reçues : %s \n", buf_reception);
-        printf("Essai1\n");
+        //printf("Essai1\n");
         if (!carlus) printf("Aucun caractère reçu !!! \n");
         // Mise à jour de la simulation avec les nouvelles valeurs
+        else{
+            char * pch;
+            double positionTrainDevant, vitesseTrainDevant;
+            pch = strtok (buf_reception,";"); //On sépare la chaîne de caractère reçu selon le caractère ;
+            positionTrainDevant = atof(&pch[0]);
+            printf("Position du train devant : %lf\n",positionTrainDevant);
+            pch = strtok(NULL, ";");
+            vitesseTrainDevant = atof(pch);
+            printf("Vitesse du train devant : %lf\n",vitesseTrainDevant);
+        }
     }
     //Synchronisation des threads a la terminaison
 
