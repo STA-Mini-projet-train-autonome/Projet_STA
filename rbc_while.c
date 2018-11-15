@@ -37,22 +37,19 @@ typedef struct {
     int numtrain;
 } couple;
 
+typedef struct {
+    double positionEspace;
+    double vitesse;
+} etat;
+
 typedef struct train {
     couple ensTrain[maxtrains]; //A CHANGER PAR UNE LISTE SIMPLEMENT CHAINEE
     int nbtrains; //nombre de trains 
 } Ttrain;
-/*
-//Creation d'une structure qui regroupe toutes les threads qui seront utilisees
-typedef struct thread {
-    pthread_t threadCreationFils;
-    pthread_t threadReceptionDonneesFils;
-    pthread_t threadReceptionDemandeConnexion;
-    pthread_t threadReceptionDonneesFilsTrainPrecedent[maxtrains];
-    pthread_t threadReceptionDonneesTrain[maxtrains];
-} Tthread;
-*/
+
 int pid;
 int tunnel[2*maxtrains][2];
+etat position[maxtrains];
 
 
 //Creation d'une structure qui sera passee en argument des fonctions servant a la creation des threads, et qui contient tous les parametres necessaires a l'execution de ces fonctions
@@ -68,9 +65,7 @@ typedef struct argument {
 
 int main(int argc, char * argv[]){
     //Section declaration des variables
-    char messageEcrire1[MAXCAR];
     char message1[MAXCAR];
-    char messageEcrire2[MAXCAR];
     char message2[MAXCAR];
     Targument arguments;
     arguments.sizeaddr = 0;
@@ -134,7 +129,7 @@ int main(int argc, char * argv[]){
     int carlus;
     int caremis;
     int totalTrain;
-    pid =1;
+    pid = 1; // On initialise la variable à 1 pour passer le premier tour de la boucle while.
     totalTrain=atoi(aux);
 
     // On attend d'abord que tous les trains se connectent
@@ -150,13 +145,20 @@ int main(int argc, char * argv[]){
         if (!carlus) printf("Aucun caractère reçu !!! \n");
         
         else{
-            flag_reception=1;
             printf("Réception effectuée de %d caractères !!! \n",carlus);
+            char * pch;
+            pch = strtok (buf_reception,";"); //On sépare la chaîne de caractère reçu selon le caractère ;      
+            arguments.numero = atoi(&pch[0]);
+            printf("Ordre : %d", arguments.numero);
+            pch = strtok (NULL, ";");
+            position[arguments.numero].positionEspace = atof(pch);
+            printf(" positionEspace %f",position[arguments.numero].positionEspace);
+            pch = strtok (NULL, ";");
+            position[arguments.numero].vitesse = atof(pch);
+            printf(" vitesse %f",position[arguments.numero].vitesse);
             
-            arguments.numero = atoi(&buf_reception[0]);
             arguments.trains.nbtrains = arguments.trains.nbtrains+1; //On incremente le nombre de train
             arguments.trains.ensTrain[arguments.numero].numtrain = arguments.numero; //On definit le train actuel
-            
             printf("\n Connexion sur le serveur du train %s avec le port %d, le numero %d et la socket %d !!! \n\n", inet_ntoa(arguments.adrtrain.sin_addr), ntohs(arguments.adrtrain.sin_port),arguments.trains.ensTrain[arguments.numero].numtrain,arguments.sd);
             fprintf(flog,"\n Connexion sur le serveur du train %s avec le port %d,le numero %d et la socket %d !!! \n\n", inet_ntoa(arguments.adrtrain.sin_addr), ntohs(arguments.adrtrain.sin_port),arguments.trains.ensTrain[arguments.numero].numtrain,arguments.sd);
             
@@ -164,8 +166,8 @@ int main(int argc, char * argv[]){
     // On crée le tunnel 
     int tunnelPere;
     int tunnelFils;
-    tunnelFils = pipe(tunnel[0]); // Il faut que cette ligne soit impérativement placée avant le fork
-    tunnelPere = pipe(tunnel[1]);
+    tunnelFils = pipe(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain]); // Il faut que cette ligne soit impérativement placée avant le fork
+    tunnelPere = pipe(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains]);
     if (tunnelFils != 0|| tunnelPere != 0)
         printf("Problème avec la création des tunnels");
     /*  Pour écrire dans le tunnel, on utilise : ssize_t write(int entreeTube, const void *elementAEcrire, size_t nombreOctetsAEcrire); 
@@ -173,79 +175,57 @@ int main(int argc, char * argv[]){
     pid=fork();
     if (pid!=0) { //Je suis dans le code du pere
         printf("\n Je suis le pere du processus de pid : %d \n\n", pid);
-        close(tunnel[0][0]);
-        close(tunnel[1][1]);   
+        close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][0]);
+        close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][1]);   
         close(arguments.sd); // Le pere ferme la socket de dialogue pour ne pas interfere avec le fils
     }
 
     else { //Je suis dans le code du fils
         arguments.trains.ensTrain[arguments.numero].pid=getpid(); //On récupère le pid du train
-        close(tunnel[0][1]);
-        close(tunnel[1][0]);
+        close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1]);
+        close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][0]);
         }
+                
+        position[0].positionEspace = 15;
+        position[0].vitesse = 18;
     }
-    sleep(5);
-    printf("Fin sleep\n");
     while(1){
+        position[0].positionEspace = position[0].positionEspace+2;
+        position[0].vitesse = 18;
         //Reception de la position du train
-
         carlus=read(arguments.sd, buf_reception, MAXCAR);
-        if (carlus)
-        printf("\n Message recu par l'ecrivain : %s \n", buf_reception);
-        else printf("\n Il y a un probleme !!!\n");
+        if (!carlus) printf("\n Il y a un probleme !!!\n");
         //Envoie de la position du train au RBC
-    /*if (pid==0) { 
-        strcpy(buf_reception,messageEcrire1 );
-        printf("Nous sommes dans le fils(pid = %d).\nIl envoie le message suivant au RBC : \"%s\".\n\n\n", getpid(), messageEcrire1);
-        write(tunnel[0][1], messageEcrire1, MAXCAR);
-
-        printf("qzgsefg\n");
-
-        read(tunnel[1][0], message2, MAXCAR);
-        printf("Nous sommes dans le fils (pid = %d).\nIl a reçu le message suivant du père : \"%s\".\n\n\n", getpid(), message2); 
-        strcpy(message2,buf_emission);
-        caremis=write(arguments.sd, buf_emission, strlen(buf_emission)+1);
-
-    }
-    else {   //Je suis dans le code du pere
-
-        printf("qzgsefg\n");
-        read(tunnel[0][0], message1, MAXCAR);
-        printf("Nous sommes dans le RBC (pid = %d).\nIl a reçu le message suivant du fils : \"%s\".\n\n\n", getpid(), message1); 
-
-        sprintf(messageEcrire2, "8");
-        printf("Nous sommes dans le père (pid = %d).\nIl envoie le message suivant au fils : \"%s\".\n\n\n", getpid(), messageEcrire2);
-        write(tunnel[1][1], messageEcrire2, MAXCAR);
-    }
-*/
     if(pid == 0)
     {        
-        //sprintf(messageEcrire2, "Bonjour, père.");
+        //printf("Nous sommes dans le fils (pid = %d).\nIl envoie le message suivant au père : \"%s\".\n\n\n", getpid(), buf_reception);
+        write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][1],buf_reception, MAXCAR);
 
-        printf("Nous sommes dans le fils (pid = %d).\nIl envoie le message suivant au père : \"%s\".\n\n\n", getpid(), buf_reception);
-
-        write(tunnel[1][1],buf_reception, MAXCAR);
-
-        read(tunnel[0][0], message1, MAXCAR);
-        printf("Nous sommes dans le fils (pid = %d).\nIl a reçu le message suivant du père : \"%s\".\n\n\n", getpid(), message1);
+        read(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][0], message1, MAXCAR);
+        //printf("Nous sommes dans le fils (pid = %d).\nIl a reçu le message suivant du père : \"%s\".\n\n\n", getpid(), message1);
         caremis=write(arguments.sd, message1, strlen(message1)+1);
 
     }
 
     else
     {
-        read(tunnel[1][0], message2, MAXCAR);
-        printf("Nous sommes dans le père (pid = %d).\nIl a reçu le message suivant du fils : \"%s\".\n\n\n", getpid(), message2);
-
-       // sprintf(messageEcrire1, "Bonjour, fils. Je suis ton père !");
-
-        printf("Nous sommes dans le père (pid = %d).\nIl envoie le message suivant au fils : \"%s\".\n\n\n", getpid(), message2);
-
-        write(tunnel[0][1], message2, MAXCAR);
+        read(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][0], message2, MAXCAR);
+        //printf("Nous sommes dans le père (pid = %d).\nIl a reçu le message suivant du fils : \"%s\".\n\n\n", getpid(), message2);
+        char * pch;
+        pch = strtok (message2,";"); //On sépare la chaîne de caractère reçu selon le caractère ;      
+        position[arguments.numero].positionEspace = atof(pch);
+        printf(" positionEspace %f \n",position[arguments.numero].positionEspace);
+        pch = strtok (NULL, ";");
+        position[arguments.numero].vitesse = atof(pch);
+        printf(" vitesse %f \n",position[arguments.numero].vitesse);
+        //printf("Nous sommes dans le père (pid = %d).\nIl envoie le message suivant au fils : \"%s\".\n\n\n", getpid(), message2);
+        if(arguments.numero>0){
+        sprintf(message2,"%f;%f",position[arguments.numero-1].positionEspace,position[arguments.numero-1].vitesse);
+        write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1], message2, MAXCAR);
+        }
 
     }
     
-        //Envoie de la position du train au train suivant(pas pour l'instant)
         sleep(1);
     }
     printf("Arret du programme principal !!!\n");
