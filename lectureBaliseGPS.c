@@ -64,6 +64,7 @@ int main()
     long cor_x=0;
     long cor_y=0;
     unsigned char adressOfHedgehog=0;
+    unsigned long timestamp;
     /* simple noncanonical input */
     do {
         unsigned char buf[2];
@@ -173,9 +174,10 @@ int main()
 		printf("\n");
 		trameRecue=0;
 		adressOfHedgehog=trame_hexa[22];
+		timestamp=trame_hexa[5]+(trame_hexa[6]<<8)+(trame_hexa[7]<<16)+(trame_hexa[8]<<24);
 		cor_x=trame_hexa[9]+(trame_hexa[10]<<8)+(trame_hexa[11]<<16)+(trame_hexa[12]<<24);
 		cor_y=trame_hexa[13]+(trame_hexa[14]<<8)+(trame_hexa[15]<<16)+(trame_hexa[16]<<24);
-		printf("\n Le train portant la balise %hhu a pour coordonnees x=%li et y=%li.\n\n",adressOfHedgehog,cor_x,cor_y);
+		printf("\n Le train portant la balise %hhu a pour coordonnees x=%li et y=%li a t=%lu ms.\n\n",adressOfHedgehog,cor_x,cor_y,timestamp);
 
 	}
     } while (1);
