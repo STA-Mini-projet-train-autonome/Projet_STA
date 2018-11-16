@@ -342,10 +342,12 @@ int main(int argc, char * argv[]){
             /* Emission */
             /* -------- */
             
-            printf("Envoi de la position dans l'espace et de la vitesse\n");
+            printf("Envoi de la position dans l'espace et de la vitesse du train actuel\n");
             // Pour l'instant on considere qu'on se deplace uniquement selon l'axe des x, donc on utilise la coordonnee en x
             long position = cor_x; //en mm, recue de la balise
             double vitesse = (double)(position-positionPrecedent) / ((double) (timestamp - tpsPrecedent)); // Normalement recue de la simulation
+            printf("   Position dans l'espace : %lu", position);
+            printf("   Vitesse : %f", vitesse);
             
             sprintf(buf_emission, "%lf;%lf;%lu;%lu", (double)position, vitesse, timestamp, tpsPrecedent);
             caremis = write(sd,buf_emission, strlen(buf_emission)+1);
@@ -358,7 +360,7 @@ int main(int argc, char * argv[]){
             /* Reception */
             /* --------- */
             
-            printf("Recpetion de la position dans l'espace et de la vitesse du train de devant\n");
+            printf("Réception de la position dans l'espace et de la vitesse du train de devant\n");
             carlus = read(sd,buf_reception, MAXCAR);
  
             if (!carlus) printf("Aucun caractère reçu !!! \n");
