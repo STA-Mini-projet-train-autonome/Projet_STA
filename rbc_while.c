@@ -15,7 +15,7 @@
 #define CHECKERROR(code,msg)    if (code == -1) { \
                                     perror(msg);\
                                     exit(1);\
-                                    }
+                                }
 
 #define maxtrains      10
 
@@ -50,7 +50,6 @@ typedef struct train {
 int pid;
 int tunnel[2*maxtrains][2]; // Tunnel servant a la communication entre un pere et son fils
 etat position[maxtrains]; // Tableau des etats (position dans l'espace et vitesse) de chaque train connecte
-
 
 //Creation d'une structure qui au depart, devait etre passee en argument des fonctions servant a la creation des threads, et qui contient tous les parametres necessaires a l'execution de ces fonctions.
 typedef struct argument {
@@ -130,6 +129,8 @@ int main(int argc, char * argv[]){
     }
 
     char aux[MAXCAR];
+    char auxPosition[MAXCAR];
+    char auxVitesse[MAXCAR];
     // On demande a l'utilisateur le nombre total de trains qui vont se connecter
     printf("\n\nEntrez le nombre total de trains qui vont se connecter : \n");
     gets(aux);
@@ -138,6 +139,14 @@ int main(int argc, char * argv[]){
     int totalTrain;
     pid = 1; // On initialise la variable a 1 pour passer le premier tour de la boucle while.
     totalTrain = atoi(aux);
+    
+    // On demande la position et la vitesse du train de tete
+    printf("/nEntrez la position dans l'espace du train de tête : \n");
+    gets(auxPosition);
+    position[0].positionEspace = atof(auxPosition);
+    printf("Entrez la vitesse du train de tête : \n\n");
+    gets(auxVitesse);
+    position[0].vitesse = atof(auxVitesse);
 
     // On attend d'abord que tous les trains se connectent
     while((arguments.trains.nbtrains < totalTrain) && (pid != 0)){
@@ -145,7 +154,7 @@ int main(int argc, char * argv[]){
         // On accepte une demande d'ouverture de connexion. Dans cette version on ne recupere pas les coordonnees de l'appelant
         arguments.sizeaddr = sizeof(arguments.adrtrain);
         arguments.sd = accept(arguments.se, (struct sockaddr *)&arguments.adrtrain, (socklen_t*) &arguments.sizeaddr);
-        printf("Réception en cours de la socket %d !!! \n", arguments.sd);
+        printf("Réception en cours de la socket %d !!! \n\n", arguments.sd);
         carlus = read(arguments.sd, buf_reception,MAXCAR);
         if (!carlus) printf("Aucun caractère reçu !!! \n");
         
@@ -190,14 +199,6 @@ int main(int argc, char * argv[]){
             close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][1]);
             close(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][0]);
         }
-        
-        // On demande la position et la vitesse du train de tete
-        printf("Entrez la position dans l'espace du train de tête : \n");
-        gets(aux);
-        position[0].positionEspace = atof(aux);
-        printf("Entrez la vitesse du train de tête : \n");
-        gets(aux);
-        position[0].vitesse = atof(aux);
     }
     
     unsigned long t = 1; // Temps en ms
@@ -212,21 +213,21 @@ int main(int argc, char * argv[]){
         
         // Envoi de l'etat du train depuis le fils au RBC
         if(pid == 0){
-            printf("Nous sommes dans le fils (pid = %d).\nEnvoi de la position dans l'espace du train au RBC", getpid());
+            printf("Nous sommes dans le fils (pid = %d).\n Envoi de la position dans l'espace du train au RBC\n", getpid());
             write(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][1],buf_reception, MAXCAR);
             read(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain][0], message1, MAXCAR);
             caremis=write(arguments.sd, message1, strlen(message1)+1);
         }
         // Reception de l'etat du train dans le RBC depuis le fils
         else{
-            printf("Nous sommes dans le père (pid = %d).\n", getpid());
+            printf("\nNous sommes dans le père (pid = %d).\n", getpid());
             read(tunnel[arguments.trains.ensTrain[arguments.numero].numtrain+maxtrains][0], message2, MAXCAR);
             
             // Traitement de la chaine de caracteres recue
             char * pch;
             pch = strtok (message2,";"); // On separe la chaîne de caractere recu selon le caractere
             position[arguments.numero].positionEspace = atof(pch);
-            printf("   Position dans l'espace : %f \n",position[arguments.numero].positionEspace);
+            printf("   Position dans l'espace : %f \n", position[arguments.numero].positionEspace);
             pch = strtok (NULL, ";");
             position[arguments.numero].vitesse = atof(pch);
             printf("   Vitesse : %f \n",position[arguments.numero].vitesse);
@@ -268,7 +269,7 @@ int main(int argc, char * argv[]){
     
     /* ------------------------------------------------------ Section fin du programme ---------------------------------------------------------- */
     
-    printf("Arrêt du programme principal !!!\n");
+    printf("\n\nArrêt du programme principal !!!\n");
 
     // Fermeture des sockets
     close(arguments.sd);

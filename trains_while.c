@@ -13,8 +13,8 @@
 #include <termios.h>
 
 
-#define LOCAL_ADDR_IP     "127.0.0.1"
-#define REMOTE_ADDR_IP     "127.0.0.1"
+#define LOCAL_ADDR_IP     "172.31.116.165"
+#define REMOTE_ADDR_IP     "172.31.116.168"
 #define REMOTE_PORT         8000
 #define MAXCAR      80
 
@@ -124,7 +124,6 @@ int main(int argc, char * argv[]){
     sd=socket(AF_INET, SOCK_STREAM, 0);
     CHECKERROR(sd, "Probleme d'ouverture de socket \n");
 
-    
     // Definir l'adresse du serveur eloigne
     adrserv.sin_family=AF_INET;
 
@@ -160,9 +159,9 @@ int main(int argc, char * argv[]){
     }
     else printf("\n Il y a un problème !!!\n");
     
-    pch = strtok (buf_emission, ";"); // On separe la chaîne de caractere recue selon le caractère ;
+    /*pch = strtok (buf_emission, ";"); // On separe la chaine de caractere recue selon le caractère ;
     ordre = atoi(&pch[0]);
-    printf("   Ordre : %d\n", ordre);
+    printf("   Ordre : %d\n", ordre);*/
     
     /* Simulation du train de tete cote train --> utile si on arrive a gerer plusieurs processus en parallele cote RBC */
     /*if (ordre == 0){ // Je suis dans le train tete
@@ -319,7 +318,7 @@ int main(int argc, char * argv[]){
                 }
                 //on vérifie que la balise est bien celle qu'on souhaite observer
                 if (trameRecue && (trame_hexa[22]!=NUM_BALISE_GPS)){ 
-                    printf("trame recue mais mauvaise balise");
+                    printf("Trame recue mais mauvaise balise");
                     trameRecue=0;
                 }
             } while (!trameRecue);
@@ -346,8 +345,8 @@ int main(int argc, char * argv[]){
             // Pour l'instant on considere qu'on se deplace uniquement selon l'axe des x, donc on utilise la coordonnee en x
             long position = cor_x; //en mm, recue de la balise
             double vitesse = (double)(position-positionPrecedent) / ((double) (timestamp - tpsPrecedent)); // Normalement recue de la simulation
-            printf("   Position dans l'espace : %lu", position);
-            printf("   Vitesse : %f", vitesse);
+            printf("   Position dans l'espace : %lu/n", position);
+            printf("   Vitesse : %f/n", vitesse);
             
             sprintf(buf_emission, "%lf;%lf;%lu;%lu", (double)position, vitesse, timestamp, tpsPrecedent);
             caremis = write(sd,buf_emission, strlen(buf_emission)+1);
