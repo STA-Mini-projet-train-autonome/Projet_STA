@@ -1,4 +1,4 @@
-//Trains fonction main()_v2 second commit
+// Trains commit final
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@
 #define REMOTE_PORT         8000
 #define MAXCAR      80
 
-// Numéro de la balise GPS du train. A ADAPTER A LA SITUATION !
+// Numero de la balise GPS du train. A ADAPTER A LA SITUATION !!!
 #define NUM_BALISE_GPS 12
 
 #define CHECKERROR(code,msg)    if (code==-1) { \
@@ -27,18 +27,15 @@
                                 }
  
  
-//Definition des variables globales
+// Definition des variables globales
 char buf_reception[MAXCAR];
-char buf_emission[MAXCAR]; 
-int flag_emission=0; // A 1 indique que des data sont presentes pour etre emises
-int flag_reception=0;  // A 1 indique que des data ont ete recues
-int flag_fin=0; // A 1 indique l'arret du programme
-//Ma socket de dialogue
+char buf_emission[MAXCAR];
 
-unsigned long tpsPrecedent=0;
-long positionPrecedent=0;
+unsigned long tpsPrecedent=0; // Temps en ms
+long positionPrecedent=0; // Position en mm
 
-//Parametrage du port serie
+/* ------------------------------------------------------ Parametrage du port serie ---------------------------------------------------------- */
+
 int set_interface_attribs(int fd, int speed)
 {
     struct termios tty;
@@ -74,12 +71,13 @@ int set_interface_attribs(int fd, int speed)
     return 0;
 }
 
-
+/* ------------------------------------------------------ Fonction principale ---------------------------------------------------------- */
 
 int main(int argc, char * argv[]){
 
-    // ============= OUVERTURE & PARAMETRAGE PORT SERIE ==================
-    //Ouverture/parametrage du port serie
+    /* -------------------------------------------- OUVERTURE & PARAMETRAGE DU PORT SERIE ---------------------------------------------- */
+
+    // Ouverture/parametrage du port serie
     char *portname = "/dev/ttyS0";
     int fd;
     fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
@@ -90,28 +88,30 @@ int main(int argc, char * argv[]){
     // Parametrage : baudrate 115200, 8 bits, pas de parite, 1 stop bit
     set_interface_attribs(fd, B115200);
 
-    //=======DECLARATION DES VARIABLES POUR LA LECTURE DES BALISES=======
+    /* ------------------------------------ DECLARATION DES VARIABLES POUR LA LECTURE DES BALISES -------------------------------------- */
+
     int trameReception = 0;
     unsigned char trame_hexa [29];
     int verif=0;
     int trameRecue=0;
-    long cor_x=0;
-    long cor_y=0;
+    long cor_x=0; // Position en x
+    long cor_y=0; // Position en y
     unsigned char adressOfHedgehog=0;
-    unsigned long timestamp;
+    unsigned long timestamp; // Temps de la balise GPS
     unsigned char buf[2];
     int rdlen;
     unsigned char *p;
     unsigned char byte;
-    // ========== OUVERTURE & PARAMETRAGE DE LA SOCKET TCP ???===========
-
-
-    int sd;
-    //Declaration des variables locales
+    
+    /* ------------------------------------------- OUVERTURE & PARAMETRAGE DE LA SOCKET TCP -------------------------------------------- */
+    
+    // Declaration des variables locales
+    int sd; //Ma socket de dialogue
     struct sockaddr_in adrclient;
     struct sockaddr_in adrserv;
-    //int carlu ; //Nombre d'octets recu
-    //int caremis; //Nombre d'octets emis
+    int carlus; //Nombre d'octets recu
+    int caremis; //Nombre d'octets emis
+    int t = 1; // Initialisation du temps en ms
 
     int sizeaddr; // Taille en octets de l'adresse
     
@@ -119,15 +119,13 @@ int main(int argc, char * argv[]){
     int ordre;
     double vitesse;
     double position;
-    
-    //  FILE * clientlog; //Fichier pour archiver les evenements
 
-    //Creation de la socket
+    // Creation de la socket de dialogue
     sd=socket(AF_INET, SOCK_STREAM, 0);
     CHECKERROR(sd, "Probleme d'ouverture de socket \n");
 
     
-    //Definir l'adresse du serveur eloigne
+    // Definir l'adresse du serveur eloigne
     adrserv.sin_family=AF_INET;
 
     switch (argc){
@@ -149,12 +147,11 @@ int main(int argc, char * argv[]){
         default : printf("\n Cas imprevu !!! Gros bogue en ligne de commande !!!");
     }
 
-    //Demande de connexion au serveur
+    // Demande de connexion au serveur
     CHECKERROR(connect(sd,(const struct sockaddr *) &adrserv, sizeof(adrserv)), "\n Echec connexion !!!\n\n");
     
     printf("\n Connexion sur le serveur %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
     
-    int caremis; //Nombre d'octets emis
     printf("Entrez l'ordre du train, sa position initiale ainsi que sa vitesse initiale sous le format 'ordre;position;vitesse' : ");
     gets(buf_emission);
     caremis = write(sd, buf_emission, strlen(buf_emission)+1);
@@ -162,32 +159,20 @@ int main(int argc, char * argv[]){
         printf("\n Message émis !!!  \n");
     }
     else printf("\n Il y a un problème !!!\n");
-
-    // Ici cela signifie que la connexion a ete ouverte
-    // Ouverture du fichier de log des data du client
-    /*clientlog=fopen("trains.log", "a+");
-    if (!clientlog) {
-        printf("Echec d'ouverture du fichier de log du client !!!");
-        exit(-1);
-    }*/
     
-   // fprintf(clientlog,"\n Connexion sur le serveur du client %s avec le port %d et la socket %d !!! \n\n", inet_ntoa(adrserv.sin_addr), ntohs(adrserv.sin_port),sd);
-    
-    pch = strtok (buf_emission,";"); //On sépare la chaîne de caractère reçu selon le caractère ;
+    pch = strtok (buf_emission, ";"); // On separe la chaîne de caractere recue selon le caractère ;
     ordre = atoi(&pch[0]);
-    printf("Ordre : %d\n", ordre);
+    printf("   Ordre : %d\n", ordre);
     
-    int carlus;
-    int t=1;
-    
-    if (ordre == 0){ //Je suis dans le train tete
+    /* Simulation du train de tete cote train --> utile si on arrive a gerer plusieurs processus en parallele cote RBC */
+    /*if (ordre == 0){ // Je suis dans le train tete
         pch = strtok (NULL, ";");
         position = atof(pch);
-        printf("PositionEspace : %f\n",position);
+        printf("   Position dans l'espace : %f\n",position);
         
         pch = strtok (NULL, ";");
         vitesse = atof(pch);
-        printf("Vitesse : %f\n", vitesse);
+        printf("   Vitesse : %f\n", vitesse);
         
         while(t<30){
             
@@ -231,14 +216,12 @@ int main(int argc, char * argv[]){
             }
             t++;
         }
-    }
-    else{
+    }*/
+    //else{
         while(1){
-            //Emission
-            //printf("Position du train : \n");
-            //gets(buf_emission);
-            //
-//=================== RECUPERATION DE LA POSITION PAR BALISE GPS ====================        
+
+            /* ------------------------------------------- RECUPERATION DE LA POSITION PAR BALISE GPS -------------------------------------------- */
+
             do {
                 rdlen = read(fd, buf, sizeof(buf) - 1);
                 if (rdlen > 0) {
@@ -353,45 +336,56 @@ int main(int argc, char * argv[]){
             cor_y=trame_hexa[13]+(trame_hexa[14]<<8)+(trame_hexa[15]<<16)+(trame_hexa[16]<<24);
             printf("\n Le train portant la balise %hhu a pour coordonnees x=%li et y=%li a t=%lu ms.\n\n",adressOfHedgehog,cor_x,cor_y,timestamp);
 
-//============== FIN DE LA RECUPERATION DE LA POSITION PAR BALISE GPS ===============
+            /* -------------------------------------- FIN DE LA RECUPERATION DE LA POSITION PAR BALISE GPS ------------------------------------------ */
 
-            printf("Envoi position et vitesse\n");
-            //pour l'instant on considère qu'on se déplace uniquement selon l'ase des x donc on utilise la coordonnée en x
-            long position = cor_x; //en mm
-            double vitesse =(double)(position-positionPrecedent) / ((double) (timestamp - tpsPrecedent));
-            sprintf(buf_emission,"%lf;%lf;%lu;%lu",(double)position,vitesse,timestamp,tpsPrecedent);
-            caremis=write(sd,buf_emission, strlen(buf_emission)+1);
+            /* -------- */
+            /* Emission */
+            /* -------- */
+            
+            printf("Envoi de la position dans l'espace et de la vitesse\n");
+            // Pour l'instant on considere qu'on se deplace uniquement selon l'axe des x, donc on utilise la coordonnee en x
+            long position = cor_x; //en mm, recue de la balise
+            double vitesse = (double)(position-positionPrecedent) / ((double) (timestamp - tpsPrecedent)); // Normalement recue de la simulation
+            
+            sprintf(buf_emission, "%lf;%lf;%lu;%lu", (double)position, vitesse, timestamp, tpsPrecedent);
+            caremis = write(sd,buf_emission, strlen(buf_emission)+1);
             tpsPrecedent = timestamp;
             positionPrecedent = position;
             if (!caremis) printf("Aucun caractère émis !!!\n");
             //else printf("%d caractères émis !!!\n",caremis);
             
-            //Reception
-            //printf("Réception en cours sur la socket %d !!! \n", sd);
-            carlus=read(sd,buf_reception, MAXCAR);
-            printf("Donnees reçues : %s \n", buf_reception);
-            //printf("Essai1\n");
+            /* --------- */
+            /* Reception */
+            /* --------- */
+            
+            printf("Recpetion de la position dans l'espace et de la vitesse du train de devant\n");
+            carlus = read(sd,buf_reception, MAXCAR);
+ 
             if (!carlus) printf("Aucun caractère reçu !!! \n");
-            // Mise à jour de la simulation avec les nouvelles valeurs
+            
+            /* ------------------------------------------------------------ SIMULATION -------------------------------------------------------------- */
+            // Mise a jour de la simulation avec les nouvelles valeurs
+            
             else{
                 char * pch;
                 double positionTrainDevant, vitesseTrainDevant;
-                pch = strtok (buf_reception,";"); //On sépare la chaîne de caractère reçue selon le caractère ;
+                pch = strtok (buf_reception,";"); // On separe la chaîne de caractere recue selon le caractere ;
                 positionTrainDevant = atof(&pch[0]);
-                printf("Position du train devant : %lf\n",positionTrainDevant);
+                printf("   Position du train devant : %lf\n",positionTrainDevant);
                 pch = strtok(NULL, ";");
                 vitesseTrainDevant = atof(pch);
-                printf("Vitesse du train devant : %lf\n",vitesseTrainDevant);
+                printf("   Vitesse du train devant : %lf\n",vitesseTrainDevant);
+                // Envoyer les parametres en entree de la simulation
             }
         }
-    }
+    //}
 
+    /* ------------------------------------------------------------ Fin du programme -------------------------------------------------------------- */
+    
     printf("\n\n Fin du dialogue cote client !!! Appuyez sur une touche ...\n\n");
 
     getchar();
 
-   // fclose(clientlog);
-
-    close(sd);
+    close(sd); // Fermeture de la socket de dialogue
 }
 
