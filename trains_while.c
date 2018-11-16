@@ -13,8 +13,8 @@
 #include <termios.h>
 
 
-#define LOCAL_ADDR_IP     "172.30.133.37"
-#define REMOTE_ADDR_IP     "172.30.131.57"
+#define LOCAL_ADDR_IP     "127.0.0.1"
+#define REMOTE_ADDR_IP     "127.0.0.1"
 #define REMOTE_PORT         8000
 #define MAXCAR      80
 
@@ -359,10 +359,10 @@ int main(int argc, char * argv[]){
             //pour l'instant on considère qu'on se déplace uniquement selon l'ase des x donc on utilise la coordonnée en x
             long position = cor_x; //en mm
             double vitesse =(double)(position-positionPrecedent) / ((double) (timestamp - tpsPrecedent));
-            tpsPrecedent = timestamp;
-            positionPrecedent=position;
-            sprintf(buf_emission,"%lf;%lf",(double)position,vitesse);
+            sprintf(buf_emission,"%lf;%lf;%lu;%lu",(double)position,vitesse,timestamp,tpsPrecedent);
             caremis=write(sd,buf_emission, strlen(buf_emission)+1);
+            tpsPrecedent = timestamp;
+            positionPrecedent = position;
             if (!caremis) printf("Aucun caractère émis !!!\n");
             //else printf("%d caractères émis !!!\n",caremis);
             
@@ -376,7 +376,7 @@ int main(int argc, char * argv[]){
             else{
                 char * pch;
                 double positionTrainDevant, vitesseTrainDevant;
-                pch = strtok (buf_reception,";"); //On sépare la chaîne de caractère reçu selon le caractère ;
+                pch = strtok (buf_reception,";"); //On sépare la chaîne de caractère reçue selon le caractère ;
                 positionTrainDevant = atof(&pch[0]);
                 printf("Position du train devant : %lf\n",positionTrainDevant);
                 pch = strtok(NULL, ";");
